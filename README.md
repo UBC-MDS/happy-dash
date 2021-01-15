@@ -6,9 +6,13 @@ This dashboard is to compare happiness across multiple countries.
 The dashboard will be divided into two main screens: an overview and a detailed view.
 Both screens will have some aspects in common: they will both contain a menu that will allow the user of the dashboard to select the features they want to analyze as well as the geographies they want to compare. Geographies can be divided into countries or continents. For both screens the majority of the screen will display visuals and the user will be able to select the date range for the visuals as well. This date slider will be located on the upper right side of the screen in both screens.
 
+### Detailed View
+
 ![Detailed View](Detailed_view.png)
 
 In detailed view, the user is able to select up to 4 features and 10 countries on the menu. On the visual section, they will be shown 5 line charts. The first and central one will display average happiness. The other line charts will be charts of the individual features and will appear below the central chart. In the upper left corner will be a legend displaying the country or continent names as well as the corresponding colours for each.
+
+### Overview
 
 ![Overview](Overview.png)
 
