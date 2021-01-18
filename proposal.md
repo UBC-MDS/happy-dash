@@ -11,13 +11,13 @@ As the world has experienced a very difficult 2020, it becomes ever more importa
 
 The description we will be working with is an aggregate of five years worth of data from the [World Happiness Report](https://worldhappiness.report/) (WHR). The data spans from 2015 - 2019 inclusive. As part of the annual surveys - the WHR has modelled the average happiness score (from 1-10) as a sum of 6 key variables.
 
-These are:
-- Gross Domestic Product (GDP)
-- Life Expectancy
-- Generosity 
-- Social Support
-- Freedom
-- Corruption Levels
+These 6 factors, with our naming convention are:
+- Gross Domestic Product (GDP) = 'gdp_per_capita'
+- Life Expectancy = 'health_life_expectancy'
+- Generosity = 'generosity'
+- Social Support = 'family'
+- Freedom = 'freedom'
+- Corruption Levels = 'perceptions_of_corruption'
 
 The modelling methodology for arriving at this contributions can be found in the statistical appendix [here](https://s3.amazonaws.com/happiness-report/2019/WHR19_Ch2A_Appendix1.pdf).
 
