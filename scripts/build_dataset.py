@@ -2,7 +2,13 @@
 Preprocessing of World Happiness Report Data
 For data from :https://www.kaggle.com/unsdsn/world-happiness.
 Download all csv's and place into `data/raw` folder, specify this as `base_path`
-Check `years` list to contain all files you wish to process
+Check `years` list to contain all files you wish to process.
+
+Due to poor Kaggle data quality `Dystopia + Residual` is missing in 2018, 2019. These were accessed from:
+2019: https://s3.amazonaws.com/happiness-report/2019/Chapter2OnlineData.xls
+2018: https://s3.amazonaws.com/happiness-report/2018/WHR2018Chapter2OnlineData.xls
+
+
 By: Dustin Andrews
 Date: Jan 18,2021
 """
@@ -10,7 +16,10 @@ import pandas as pd
 import os
 
 base_path = "../data/raw/"
-path_out = "../data/processed/"
+dystopia_file_2018 = "../data/raw/2018_dystopia_residual.csv"
+dystopia_file_2019 = "../data/raw/2019_dystopia_residual.csv"
+
+path_write_out = "../data/processed/"
 years = ["2015", "2016", "2017", "2018", "2019"]
 yearly_dict = {}
 
@@ -24,6 +33,7 @@ for y in years:
     )
     yearly_dict[y] = yearly_df
     cols = list(yearly_dict[y].columns)
+    # print(cols)
 
 
 # Have to manually fix each year in a different way
@@ -36,7 +46,7 @@ yearly_dict["2015"].rename(
     ),
     inplace=True,
 )
-yearly_dict["2015"].drop(columns=["dystopia_residual", "standard_error"], inplace=True)
+yearly_dict["2015"].drop(columns=["standard_error"], inplace=True)
 
 
 yearly_dict["2016"].rename(
@@ -52,7 +62,6 @@ yearly_dict["2016"].drop(
     columns=[
         "lower_confidence_interval",
         "upper_confidence_interval",
-        "dystopia_residual",
     ],
     inplace=True,
 )
@@ -70,14 +79,14 @@ yearly_dict["2017"].rename(
 )
 
 yearly_dict["2017"].drop(
-    columns=[
-        "whisker_low",
-        "whisker_high",
-        "dystopia_residual",
-    ],
+    columns=["whisker_low", "whisker_high"],
     inplace=True,
 )
 
+# Because of janky Kaggle standards, join in `dystopia_residual` from separate file
+# For 2018 and 2019 data.....
+dystopia_2018 = pd.read_csv(dystopia_file_2018)
+dystopia_2018.columns = ["country", "dystopia_residual"]
 
 yearly_dict["2018"].rename(
     columns=(
@@ -93,6 +102,12 @@ yearly_dict["2018"].rename(
     inplace=True,
 )
 
+df_2018 = yearly_dict["2018"]
+yearly_dict["2018"] = pd.merge(df_2018, dystopia_2018, on="country")
+
+
+dystopia_2019 = pd.read_csv(dystopia_file_2019)
+dystopia_2019.columns = ["country", "dystopia_residual"]
 yearly_dict["2019"].rename(
     columns=(
         {
@@ -106,6 +121,9 @@ yearly_dict["2019"].rename(
     ),
     inplace=True,
 )
+df_2019 = yearly_dict["2019"]
+yearly_dict["2019"] = pd.merge(df_2019, dystopia_2019, on="country")
+
 
 # Stick them together in one big dataframe
 summary_df = pd.DataFrame()
@@ -113,7 +131,7 @@ for k, v in yearly_dict.items():
     temp_df = v
     v["year"] = k
     summary_df = pd.concat([summary_df, v], axis=0)
-    # print(v.columns)
+    print(v.columns)
 
 # Fix some country names
 summary_df.loc[summary_df.country == "Hong Kong S.A.R., China", "country"] = "Hong Kong"
