@@ -24,7 +24,7 @@ SIDEBAR_STYLE = {
 }
 
 CONTENT_STYLE = {
-    "margin-left": "18rem",
+    # "margin-left": "18rem",
     "margin-right": "2rem",
     "padding": "2rem 1rem",
 }
@@ -50,8 +50,8 @@ mirco_tab_leftbar_countries = dcc.Dropdown(
     value=["Canada", "Switzerland", "China"],
 )
 
-sidebar = html.Div(
-    [
+sidebar = dbc.Col(
+    children=[
         html.H2("Features", className="display-6"),
         html.Hr(),
         dbc.Checklist(
@@ -91,7 +91,9 @@ sidebar = html.Div(
             },
         ),
     ],
-    style=SIDEBAR_STYLE,
+    style={"background-color": "#f8f9fa"},
+    # style=SIDEBAR_STYLE,
+    md=3,
 )
 
 
@@ -105,27 +107,44 @@ sidebar = html.Div(
 #     [dbc.Col(micro_tab_leftbar, lg=2, md=2), dbc.Col(html.Div(), md=4, lg=4)]
 # )
 
-content = html.Div(id="micro-content", style=CONTENT_STYLE)
+content = dbc.Col(
+    id="micro-content",
+    # style=CONTENT_STYLE,
+    md=9,
+    children=[
+        dcc.Graph(id="happiness-over-time", style={"height": "25%", "margin": "0"}),
+        dcc.Graph(id="features-over-time", style={"height": "75%"}),
+    ],
+)
+
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = dbc.Container(
-    [
-        # dbc.Tabs([
-        #     dbc.Tab(micro_tab, label='Micro', style={'background-color': 'red'}),
-        #     dbc.Tab('overall tab', label='Overall')
-        # ])
-        sidebar,
-        content,
-    ]
+    children=[
+        dbc.Row(
+            children=[
+                # dbc.Tabs([
+                #     dbc.Tab(micro_tab, label='Micro', style={'background-color': 'red'}),
+                #     dbc.Tab('overall tab', label='Overall')
+                # ])
+                sidebar,
+                content,
+            ],
+            className="h-100",
+        )
+    ],
+    fluid=True,
+    style={"height": "100vh"},
 )
 
 ####*******************************************Callback definition***************************
-def filter_df(summary_df, country_list, feat_list, year_list):
+def filter_df(summary_df, country_list, feat_list, year_range):
     """
     Helper func to filter summary_df to countries, columns (feat_list), and list of years.
     Keep "country", "happiness_score", "year" for downstream tasks
     """
-    year_list = [int(x) for x in year_list]
+    year_list = list(range(min(year_range), max(year_range) + 1))
+
     return summary_df.loc[
         ((summary_df.country.isin(country_list)) & (summary_df.year.isin(year_list))),
         feat_list + ["country", "happiness_score", "year"],
@@ -133,14 +152,14 @@ def filter_df(summary_df, country_list, feat_list, year_list):
 
 
 @app.callback(
-    Output("micro-content", "children"),
+    [Output("happiness-over-time", "figure"), Output("features-over-time", "figure")],
     [
         Input("country-select-1", "value"),
         Input("feature-select-1", "value"),
         Input("year-select-1", "value"),
     ],
 )
-def build_detail_plots(country_list, feat_list, year_list):
+def build_detail_plots(country_list, feat_list, year_range):
     """Builds a list of bar charts summarizing certain countries, feature names (columns in the df)
     and a time frame.
 
@@ -170,29 +189,32 @@ def build_detail_plots(country_list, feat_list, year_list):
 
     # Filter to specified data
     # Improve year formatting for datetime x-axis
-    filtered_df = filter_df(summary_df, country_list, feat_list, year_list).assign(
+    filtered_df = filter_df(summary_df, country_list, feat_list, year_range).assign(
         year=lambda x: pd.to_datetime(x.year, format="%Y")
     )
     cols = list(set(all_feats).intersection(filtered_df.columns))
 
     fig_list = []
     # Build first plot - happiness scores over time
-    happiness_plot = px.line(
-        filtered_df,
-        x="year",
-        y="happiness_score",
-        color="country",
-        width=1000,
-        title="Happiness Score Over Time by Country",
-    ).update_layout(
-        {
-            "xaxis": {
-                # "tickformat": "%Y",
-                "tickmode": "array",
-                "tickvals": filtered_df.year.dt.year.unique(),
-                "ticktext": [str(x) for x in filtered_df.year.dt.year.unique()],
+    happiness_plot = (
+        px.line(
+            filtered_df,
+            x="year",
+            y="happiness_score",
+            color="country",
+            title="Happiness Score Over Time by Country",
+        )
+        .update_traces(mode="lines+markers")
+        .update_layout(
+            {
+                "xaxis": {
+                    # "tickformat": "%Y",
+                    "tickmode": "array",
+                    "tickvals": filtered_df.year.dt.year.unique(),
+                    "ticktext": [str(x) for x in filtered_df.year.dt.year.unique()],
+                }
             }
-        }
+        )
     )
     fig_list.append(happiness_plot)
 
@@ -207,10 +229,9 @@ def build_detail_plots(country_list, feat_list, year_list):
             color="country",
             facet_col="variable",
             facet_col_wrap=2,
-            facet_col_spacing=0.05,
-            title="Impact of features over time on Happiness Score",
-            width=1000,
-            height=1000,
+            facet_col_spacing=0.04,
+            facet_row_spacing=0.07,
+            title="Impact Of Features Over Time On Happiness Score",
         )
         .update_yaxes(matches=None)
         .update_xaxes(showticklabels=True)
