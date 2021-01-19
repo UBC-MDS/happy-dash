@@ -1,4 +1,4 @@
-# Author: Kevin Shahnazari
+# Author: Kevin Shahnazari, Dustin Andrews
 # Date created: Jan 18 2021
 
 import dash
@@ -43,13 +43,6 @@ feature_dict = {
 
 ###***************************************Layout building************************************
 
-mirco_tab_leftbar_countries = dcc.Dropdown(
-    id="country-select-1",
-    multi=True,
-    options=[{"label": x, "value": x} for x in summary_df.country.unique()],
-    value=["Canada", "Switzerland", "China"],
-)
-
 sidebar = dbc.Col(
     children=[
         html.H2("Features", className="display-6"),
@@ -84,9 +77,6 @@ sidebar = dbc.Col(
             ),
             width=12,
             style={
-                # "width": "100%",
-                # "height": "300px",
-                # "overflow": "scroll",
                 "padding": "10px 10px 10px 0px",
             },
         ),
@@ -112,8 +102,8 @@ content = dbc.Col(
     # style=CONTENT_STYLE,
     md=9,
     children=[
-        dcc.Graph(id="happiness-over-time", style={"height": "25%", "margin": "0"}),
-        dcc.Graph(id="features-over-time", style={"height": "75%"}),
+        dcc.Graph(id="happiness-over-time", style={"height": "30%"}),
+        dcc.Graph(id="features-over-time", style={"height": "70%"}),
     ],
 )
 
@@ -189,12 +179,15 @@ def build_detail_plots(country_list, feat_list, year_range):
 
     # Filter to specified data
     # Improve year formatting for datetime x-axis
-    filtered_df = filter_df(summary_df, country_list, feat_list, year_range).assign(
-        year=lambda x: pd.to_datetime(x.year, format="%Y")
+    filtered_df = (
+        filter_df(summary_df, country_list, feat_list, year_range)
+        .assign(year=lambda x: pd.to_datetime(x.year, format="%Y"))
+        .sort_values(by="year")
     )
     cols = list(set(all_feats).intersection(filtered_df.columns))
 
     fig_list = []
+
     # Build first plot - happiness scores over time
     happiness_plot = (
         px.line(
@@ -208,11 +201,11 @@ def build_detail_plots(country_list, feat_list, year_range):
         .update_layout(
             {
                 "xaxis": {
-                    # "tickformat": "%Y",
                     "tickmode": "array",
                     "tickvals": filtered_df.year.dt.year.unique(),
                     "ticktext": [str(x) for x in filtered_df.year.dt.year.unique()],
-                }
+                },
+                "margin": {"b": 0},
             }
         )
     )
@@ -232,6 +225,13 @@ def build_detail_plots(country_list, feat_list, year_range):
             facet_col_spacing=0.04,
             facet_row_spacing=0.07,
             title="Impact Of Features Over Time On Happiness Score",
+        )
+        .for_each_annotation(
+            lambda label: label.update(
+                text=list(feature_dict.keys())[
+                    list(feature_dict.values()).index(label.text.split("=")[1])
+                ]
+            )
         )
         .update_yaxes(matches=None)
         .update_xaxes(showticklabels=True)
