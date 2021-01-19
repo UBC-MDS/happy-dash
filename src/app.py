@@ -161,8 +161,8 @@ def build_detail_plots(country_list, feat_list, year_range):
         List of country names to filter `summary_df` on
     feat_list : list
         List of features (column names in `summary_df`). If `None` use all 7 contributing features to happiness score
-    year_list : list
-        List of years to filter on
+    year_range : list
+        List of years to filter on. Will only contain endpoints
 
     Returns
     -------

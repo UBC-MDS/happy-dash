@@ -1,3 +1,8 @@
+"""
+Rough code to build callbacks in the happy-dash dashboard
+By: Dustin Andrews
+Date: 2020-01-18
+"""
 import pandas as pd
 import numpy as np
 import plotly.express as px
