@@ -3,8 +3,6 @@ import numpy as np
 import plotly.express as px
 
 
-summary_df = pd.read_csv("../data/processed/summary_df.csv")
-
 #%%
 def build_overall_graph(summary_df, country_list, feat_list, year_list):
     """Builds a bar chart summarizing certain countries, feature names (columns in the df)
@@ -65,15 +63,8 @@ def build_overall_graph(summary_df, country_list, feat_list, year_list):
     ## If wanting to move legend around, update layout
     # fig.update_layout({"legend_orientation": "h", "margin": {"t": 40, "l": 50}})
 
-    fig.show()
+    return fig
 
-
-build_overall_graph(
-    summary_df,
-    ["Canada", "Switzerland", "China", "France"],
-    feat_list=None,  # ["gdp_per_capita", "generosity", "freedom"],
-    year_list=[2018, 2019],
-)
 
 #%%
 def filter_df(summary_df, country_list, feat_list, year_list):
@@ -87,13 +78,6 @@ def filter_df(summary_df, country_list, feat_list, year_list):
         feat_list + ["country", "happiness_score", "year"],
     ]
 
-
-assert (
-    filter_df(summary_df, ["Canada"], ["happiness_score"], ["2018"])
-    .loc[:, "happiness_score"]
-    .values
-    == 7.328
-)
 
 # %%
 def build_detail_plots(summary_df, country_list, feat_list, year_list):
@@ -146,6 +130,7 @@ def build_detail_plots(summary_df, country_list, feat_list, year_list):
         x="year",
         y="happiness_score",
         color="country",
+        width=1000,
         title="Happiness Score Over Time by Country",
     ).update_layout(
         {
@@ -159,29 +144,39 @@ def build_detail_plots(summary_df, country_list, feat_list, year_list):
     )
     fig_list.append(happiness_plot)
 
-    # Build rest of selected plots by features
-    for c in cols:
-        fig_list.append(
-            px.line(
-                filtered_df,
-                x="year",
-                y=c,
-                color="country",
-                title=f"Impact of {c} over time on Happiness Score",
-            ).update_layout(
-                {
-                    "xaxis": {
-                        # "tickformat": "%Y",
-                        "tickmode": "array",
-                        "tickvals": filtered_df.year.dt.year.unique(),
-                        "ticktext": [str(x) for x in filtered_df.year.dt.year.unique()],
-                    }
-                }
-            )
+    # Facetted plot for features
+    fig_list.append(
+        px.line(
+            filtered_df.melt(
+                id_vars=["country", "year"], value_vars=cols, value_name="Contribution"
+            ),
+            x="year",
+            y="Contribution",
+            color="country",
+            facet_col="variable",
+            facet_col_wrap=2,
+            facet_col_spacing=0.05,
+            title="Impact of features over time on Happiness Score",
+            width=1000,
+            height=1000,
         )
+        .update_yaxes(matches=None)
+        .update_xaxes(showticklabels=True)
+        .update_traces(mode="lines+markers")
+    )
 
     return fig_list
 
+
+#%% For use in VS Code Interactive window
+summary_df = pd.read_csv("../data/processed/summary_df.csv")
+
+overall_graph = build_overall_graph(
+    summary_df,
+    ["Canada", "Switzerland", "China", "France"],
+    feat_list=None,  # ["gdp_per_capita", "generosity", "freedom"],
+    year_list=[2018, 2019],
+)
 
 figs = build_detail_plots(
     summary_df,
@@ -192,4 +187,3 @@ figs = build_detail_plots(
 
 for f in figs:
     f.show()
-# %%
