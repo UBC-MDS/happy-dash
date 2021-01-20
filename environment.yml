@@ -6,7 +6,7 @@ dependencies:
   - ipykernel
   - ipywidgets
   - matplotlib
-  - pandas==1.2.0
+  - pandas
   - altair>=4.1.0
   - dash==1.18.1
   - dash-core-components==1.14.1
