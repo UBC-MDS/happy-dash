@@ -45,6 +45,8 @@ feature_dict = {
 
 sidebar = dbc.Col(
     children=[
+        html.H1("World Happiness Report Explorer", className="display-5"),
+        html.Hr(),
         html.H2("Features", className="display-6"),
         html.Hr(),
         dbc.Checklist(
@@ -102,8 +104,13 @@ content = dbc.Col(
     # style=CONTENT_STYLE,
     md=9,
     children=[
-        dcc.Graph(id="happiness-over-time", style={"height": "30%"}),
-        dcc.Graph(id="features-over-time", style={"height": "70%"}),
+        dcc.Loading(
+            type="cube",
+            children=[
+                dcc.Graph(id="happiness-over-time", style={"height": "30vh"}),
+                dcc.Graph(id="features-over-time", style={"height": "70vh"}),
+            ],
+        ),
     ],
 )
 
