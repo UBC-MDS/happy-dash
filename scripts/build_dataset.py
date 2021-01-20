@@ -8,6 +8,9 @@ Due to poor Kaggle data quality `Dystopia + Residual` is missing in 2018, 2019. 
 2019: https://s3.amazonaws.com/happiness-report/2019/Chapter2OnlineData.xls
 2018: https://s3.amazonaws.com/happiness-report/2018/WHR2018Chapter2OnlineData.xls
 
+Gets country codes for chloropleth plotting from:
+"https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv"
+
 
 By: Dustin Andrews
 Date: Jan 18,2021
@@ -18,6 +21,9 @@ import os
 base_path = "../data/raw/"
 dystopia_file_2018 = "../data/raw/2018_dystopia_residual.csv"
 dystopia_file_2019 = "../data/raw/2019_dystopia_residual.csv"
+world_polygons_df = pd.read_csv(
+    "https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv"
+)
 
 path_write_out = "../data/processed/"
 years = ["2015", "2016", "2017", "2018", "2019"]
@@ -138,10 +144,29 @@ summary_df.loc[summary_df.country == "Hong Kong S.A.R., China", "country"] = "Ho
 summary_df.loc[
     summary_df.country == "Somaliland region", "country"
 ] = "Somaliland Region"
+summary_df.loc[
+    summary_df.country == "Congo (Kinshasa)", "country"
+] = "Congo, Democratic Republic of the"
+summary_df.loc[
+    summary_df.country == "Congo (Brazzaville)", "country"
+] = "Congo, Republic of the"
+summary_df.loc[summary_df.country == "South Korea", "country"] = "Korea, South"
+summary_df.loc[summary_df.country == "North Cyprus", "country"] = "Cyprus"
+summary_df.loc[summary_df.country == "Myanmar", "country"] = "Burma"
+summary_df.loc[summary_df.country == "Ivory Coast", "country"] = "Cote d'Ivoire"
+
 
 # Fix region missing in some years. Drop the column then rejoin a lookup table onto full dataframe
 region_lookup = summary_df.loc[:, ["country", "region"]].drop_duplicates().dropna()
 summary_df.drop(columns=["region"], inplace=True)
 summary_df = pd.merge(summary_df, region_lookup, on="country")
 
-summary_df.to_csv(os.path.join(path_out, "summary_df.csv"), index=False)
+# Join on country codes, Plotly can use this to plot country boundaries....
+world_polygons_df.rename(
+    {"COUNTRY": "country", "CODE": "country_code"}, axis=1, inplace=True
+)
+world_polygons_df.drop("GDP (BILLIONS)", axis=1, inplace=True)
+
+summary_df = pd.merge(summary_df, world_polygons_df, on="country")
+
+summary_df.to_csv(os.path.join(path_write_out, "summary_df.csv"), index=False)
