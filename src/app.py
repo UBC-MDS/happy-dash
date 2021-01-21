@@ -183,6 +183,9 @@ def build_detail_plots(country_list, feat_list, year_range):
 
     if feat_list is None:
         feat_list = all_feats
+    
+    if country_list == []:
+        country_list=['Canada']
 
     # Filter to specified data
     # Improve year formatting for datetime x-axis
