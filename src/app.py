@@ -9,7 +9,6 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly_express as px
 
-
 ###********************************* Define constants *******************************************
 summary_df = pd.read_csv("data/processed/summary_df.csv").sort_values(by="country")
 
@@ -115,6 +114,7 @@ content = dbc.Col(
 )
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+server = app.server
 app.layout = dbc.Container(
     children=[
         dbc.Row(
@@ -182,7 +182,7 @@ def build_detail_plots(country_list, feat_list, year_range):
 
     if feat_list is None:
         feat_list = all_feats
-    
+
     if country_list == []:
         country_list=['Canada']
 
@@ -247,10 +247,9 @@ def build_detail_plots(country_list, feat_list, year_range):
         .update_traces(mode="lines+markers")
     )
 
-    
+
 
     return fig_list
-
 
 if __name__ == "__main__":
     app.run_server(debug=True)

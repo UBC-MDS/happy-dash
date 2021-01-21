@@ -20,4 +20,5 @@ dependencies:
   - pip>=20
   - black
   - flake8
+  - gunicorn
 
