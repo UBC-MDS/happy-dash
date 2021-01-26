@@ -167,6 +167,6 @@ world_polygons_df.rename(
 )
 world_polygons_df.drop("GDP (BILLIONS)", axis=1, inplace=True)
 
-summary_df = pd.merge(summary_df, world_polygons_df, on="country")
+summary_df = pd.merge(summary_df, world_polygons_df, on="country", how="left")
 
 summary_df.to_csv(os.path.join(path_write_out, "summary_df.csv"), index=False)

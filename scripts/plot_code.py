@@ -78,35 +78,19 @@ summary_df = pd.read_csv("../data/processed/summary_df.csv")
 
 
 #%%
-fig = go.Figure(
-    data=go.Choropleth(
-        locations=summary_df["country_code"],
-        z=summary_df["happiness_score"],
-        text=summary_df["country"],
-        colorscale="Blues",
-        autocolorscale=False,
-        reversescale=False,
-        marker_line_color="darkgray",
-        marker_line_width=0.5,
-        # colorbar_tickprefix="$",
-        # colorbar_title="GDP<br>Billions US$",
-    )
+fig = px.choropleth(
+    data_frame=summary_df,
+    # locationmode="ISO-3",
+    locations="country_code",
+    color="happiness_score",
+    animation_frame="year",
+    animation_group="country",
+    # text=summary_df["country"],
 )
 
 fig.update_layout(
     title_text="Happiness Score Worldwide on 10 Point Scale",
     geo=dict(showframe=False, showcoastlines=False, projection_type="equirectangular"),
-    # annotations=[
-    #     dict(
-    #         x=0.55,
-    #         y=0.1,
-    #         xref="paper",
-    #         yref="paper",
-    #         text='Source: <a href="https://www.cia.gov/library/publications/the-world-factbook/fields/2195.html">\
-    #         CIA World Factbook</a>',
-    #         showarrow=False,
-    #     )
-    # ],
 )
 
 fig.show()
