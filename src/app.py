@@ -113,7 +113,7 @@ content = dbc.Col(
     ],
 )
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP],title="Happy Dash")
 server = app.server
 app.layout = dbc.Container(
     children=[
@@ -242,7 +242,7 @@ def build_detail_plots(country_list, feat_list, year_range):
                 ]
             )
         )
-        .update_yaxes(matches=None)
+        .update_yaxes(matches=None,showticklabels=True)
         .update_xaxes(showticklabels=True)
         .update_traces(mode="lines+markers")
     )
