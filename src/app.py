@@ -81,56 +81,85 @@ sidebar = dbc.Col(
                 "padding": "10px 10px 10px 0px",
             },
         ),
+        #### -------------- FOR FILTERING ON REGIONS, NOT SURE ON DESIGN YET
+        # html.H3("Regions", className="display-6"),
+        # dbc.Col(
+        #     dcc.Dropdown(
+        #         id="region-select-1",
+        #         multi=True,
+        #         options=[
+        #             {"label": x, "value": x}
+        #             for x in summary_df.sort_values(by="region").region.unique()
+        #         ],
+        #         value=["Canada", "Switzerland", "China"],
+        #     ),
+        #     width=12,
+        #     style={
+        #         "padding": "10px 10px 10px 0px",
+        #     },
+        # ),
     ],
     style={"background-color": "#f8f9fa"},
-    # style=SIDEBAR_STYLE,
     md=3,
 )
 
-
-### CODE TO SETUP SIDEBAR WITHIN TABS:
-# micro_tab_leftbar = [
-#     mirco_tab_leftbar_features,
-#     dbc.Label("Countries"),
-# ]
-
-# micro_tab = dbc.Row(
-#     [dbc.Col(micro_tab_leftbar, lg=2, md=2), dbc.Col(html.Div(), md=4, lg=4)]
-# )
-
-content = dbc.Col(
-    id="micro-content",
-    # style=CONTENT_STYLE,
-    md=9,
+detail_content = dbc.Col(
+    id="detail_content",
     children=[
         dcc.Loading(
             type="cube",
             children=[
                 dcc.Graph(id="happiness-over-time", style={"height": "30vh"}),
-                dcc.Graph(id="features-over-time", style={"height": "70vh"}),
+                dcc.Graph(id="features-over-time", style={"height": "68vh"}),
             ],
         ),
     ],
 )
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+summary_content = dbc.Col(
+    id="summary_content",
+    children=[
+        dcc.Loading(
+            type="cube",
+            children=[
+                dcc.Graph(id="happiness-bar-chart", style={"height": "45vh"}),
+                dcc.Graph(id="happiness-map", style={"height": "50vh"}),
+            ],
+        ),
+    ],
+)
+
+app = dash.Dash(
+    __name__,
+    title="World Happiness Explorer",
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
+)
 server = app.server
 app.layout = dbc.Container(
     children=[
         dbc.Row(
             children=[
-                # dbc.Tabs([
-                #     dbc.Tab(micro_tab, label='Micro', style={'background-color': 'red'}),
-                #     dbc.Tab('overall tab', label='Overall')
-                # ])
                 sidebar,
-                content,
+                dbc.Col(
+                    children=[
+                        dbc.Tabs(
+                            [
+                                dbc.Tab(
+                                    detail_content,
+                                    label="Detailed View",
+                                    # style={"background-color": "red"},
+                                ),
+                                dbc.Tab(summary_content, label="Summary View"),
+                            ]
+                        ),
+                    ],
+                    md=9,
+                ),
             ],
-            className="h-100",
         )
     ],
     fluid=True,
-    style={"height": "100vh"},
+    style={"width": "80%"},
 )
 
 ####*******************************************Callback definition***************************
@@ -184,7 +213,7 @@ def build_detail_plots(country_list, feat_list, year_range):
         feat_list = all_feats
 
     if country_list == []:
-        country_list=['Canada']
+        country_list = ["Canada"]
 
     # Filter to specified data
     # Improve year formatting for datetime x-axis
@@ -247,9 +276,8 @@ def build_detail_plots(country_list, feat_list, year_range):
         .update_traces(mode="lines+markers")
     )
 
-
-
     return fig_list
+
 
 if __name__ == "__main__":
     app.run_server(debug=True)
