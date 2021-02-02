@@ -103,6 +103,7 @@ sidebar = dbc.Col(
     md=3,
 )
 
+## Build out content within each tab. Sidebar is outside of tab structure
 detail_content = dbc.Col(
     id="detail_content",
     children=[
@@ -122,8 +123,8 @@ summary_content = dbc.Col(
         dcc.Loading(
             type="cube",
             children=[
-                dcc.Graph(id="happiness-bar-chart", style={"height": "45vh"}),
                 dcc.Graph(id="happiness-map", style={"height": "50vh"}),
+                dcc.Graph(id="happiness-bar-chart", style={"height": "45vh"}),
             ],
         ),
     ],
@@ -136,6 +137,7 @@ app = dash.Dash(
 )
 
 server = app.server
+
 app.layout = dbc.Container(
     children=[
         dbc.Row(
@@ -148,10 +150,17 @@ app.layout = dbc.Container(
                                 dbc.Tab(
                                     detail_content,
                                     label="Detailed View",
+                                    tab_id="detail_view",
                                     # style={"background-color": "red"},
                                 ),
-                                dbc.Tab(summary_content, label="Summary View"),
-                            ]
+                                dbc.Tab(
+                                    summary_content,
+                                    label="Summary View",
+                                    tab_id="summary_view",
+                                ),
+                            ],
+                            id="tabs",
+                            active_tab="summary_view",
                         ),
                     ],
                     md=9,
@@ -171,9 +180,12 @@ def filter_df(summary_df, country_list, feat_list, year_range):
     """
     year_list = list(range(min(year_range), max(year_range) + 1))
 
+    if country_list == []:
+        country_list = summary_df.country.unique().tolist()
+
     return summary_df.loc[
         ((summary_df.country.isin(country_list)) & (summary_df.year.isin(year_list))),
-        feat_list + ["country", "happiness_score", "year"],
+        feat_list + ["country", "happiness_score", "year", "country_code"],
     ]
 
 
@@ -183,22 +195,28 @@ def filter_df(summary_df, country_list, feat_list, year_range):
         Input("country-select-1", "value"),
         Input("feature-select-1", "value"),
         Input("year-select-1", "value"),
+        Input("tabs", "active_tab"),
     ],
 )
-def build_detail_plots(country_list, feat_list, year_range):
-    """Builds a list of bar charts summarizing certain countries, feature names (columns in the df)
+def build_detail_plots(country_list, feat_list, year_range, active_tab):
+    """Builds a list of charts summarizing certain countries, feature names (columns in the df)
     and a time frame.
+
+    First chart returned is happiness score over time.
+    Second chart is a facetted plot for each contributing feature to overall happiness in each country
+
+    ** Only executes if "Detailed View" tab is selected **
 
     Parameters
     ----------
-    summary_df : Pandas.DataFrame
-        Dataframe with columns
     country_list : list
         List of country names to filter `summary_df` on
     feat_list : list
         List of features (column names in `summary_df`). If `None` use all 7 contributing features to happiness score
     year_range : list
         List of years to filter on. Will only contain endpoints
+    active_tab : string
+        Name of active tab in content area. Used to short circuit callback if detail content isn't active
 
     Returns
     -------
@@ -207,6 +225,10 @@ def build_detail_plots(country_list, feat_list, year_range):
         Second - Eigth chart: Contributing factor trend over time by country.
         Empty charts appended at end if all features aren't specified.
     """
+    # Short circuit if detail tab isn't active
+    if active_tab != "detail_view":
+        return [{}, {}]
+
     # ALl features to consider
     all_feats = [v for v in feature_dict.values()]
 
@@ -278,6 +300,71 @@ def build_detail_plots(country_list, feat_list, year_range):
     )
 
     return fig_list
+
+
+@app.callback(
+    Output("happiness-map", "figure"),
+    [
+        Input("country-select-1", "value"),
+        Input("year-select-1", "value"),
+        Input("tabs", "active_tab"),
+    ],
+)
+def happiness_map(country_list, year_range, active_tab):
+    """Builds a cholorpleth map colored by happiness score based on year, time range, country list
+    ** Only executes if "Summary View" tab is selected **
+
+    Parameters
+    ----------
+    country_list : list
+        List of country names to filter `summary_df` on
+    year_range : list
+        List of years to filter on. Will only contain endpoints
+    active_tab : string
+        Name of active tab in content area. Used to short circuit callback if detail content isn't active
+
+    Returns
+    -------
+    fig : [plotly.express.Figure]
+        Chloropleth map with happiness score by country
+    """
+
+    # Short circuit if detail tab isn't active
+    if active_tab != "summary_view":
+        return {}
+
+    # Filter to specified data
+    # Leave all countries in
+    filtered_df = (
+        filter_df(summary_df, [], [], year_range)
+        # .assign(year=lambda x: pd.to_datetime(x.year, format="%Y"))
+        .sort_values(by="year")
+    )
+
+    fig = px.choropleth(
+        data_frame=filtered_df,
+        locationmode="ISO-3",
+        locations="country_code",
+        hover_name="country",
+        color="happiness_score",
+        animation_frame="year",
+        animation_group="country",
+        # range_color=[3, 10]
+        # text=summary_df["country"],
+    )
+
+    fig.layout.sliders[0].pad.t = 10
+    fig.layout.updatemenus[0].pad.t = 10
+
+    fig.update_layout(
+        title_text="Happiness Score Worldwide on 10 Point Scale",
+        geo=dict(
+            showframe=False, showcoastlines=False, projection_type="equirectangular"
+        ),
+        margin=dict(l=0, r=0, t=50, b=0),
+    )
+
+    return fig
 
 
 if __name__ == "__main__":
