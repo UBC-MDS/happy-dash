@@ -305,19 +305,16 @@ def build_detail_plots(country_list, feat_list, year_range, active_tab):
 @app.callback(
     Output("happiness-map", "figure"),
     [
-        Input("country-select-1", "value"),
         Input("year-select-1", "value"),
         Input("tabs", "active_tab"),
     ],
 )
-def happiness_map(country_list, year_range, active_tab):
+def happiness_map(year_range, active_tab):
     """Builds a cholorpleth map colored by happiness score based on year, time range, country list
     ** Only executes if "Summary View" tab is selected **
 
     Parameters
     ----------
-    country_list : list
-        List of country names to filter `summary_df` on
     year_range : list
         List of years to filter on. Will only contain endpoints
     active_tab : string
