@@ -366,6 +366,112 @@ def happiness_map(country_list, year_range, active_tab):
 
     return fig
 
+@app.callback(
+    Output("happiness-bar-chart", "figure"),
+    [
+        Input("country-select-1", "value"),
+        Input("feature-select-1", "value"),
+        Input("year-select-1", "value"),
+        Input("tabs", "active_tab"),
+    ],
+)
+
+def build_overall_graph(country_list, feat_list, year_list, active_tab):
+    """Builds a bar chart summarizing certain countries, feature names (columns in the df)
+    and a time frame
+
+    Parameters
+    ----------
+    country_list : list
+        List of country names to filter `summary_df` on
+    feat_list : list
+        List of features (column names in `summary_df`). If `None` use all 7 contributing features to happiness score
+    year_list : list
+        List of years to filter on
+    active_tab : string
+        Name of active tab in content area. Used to short circuit callback if detail content isn't active
+    
+    Returns
+    -------
+    fig : plotly.express.Figure
+    """
+     # Short circuit if detail tab isn't active
+    if active_tab != "summary_view":
+        return {}
+
+    if feat_list is None:
+        feat_list = feature_dict.values
+
+    # Filter to specified data, calculate means
+    filtered_df = (
+        filter_df(summary_df, country_list, feat_list, year_list)
+        .groupby("country")
+        .mean()
+        .reset_index()
+        .sort_values("happiness_score", ascending=True)
+    )
+    cols = list(set(feat_list).intersection(filtered_df.columns))
+    title_string = (
+        f"Average Happiness Score by Contributing Factors: {min(year_list)} to {max(year_list)}"
+        if len(year_list) > 1
+        else f"Happiness Score by Contributing Factor: {year_list[0]}"
+    )
+
+    labels_dict = {
+        "value" : "Happiness Score",
+        "country" : "Country",
+        "variable" : "Features"
+    }
+
+    for feat in feat_list:
+        for key, value in feature_dict.items():
+         if feat == value:
+             labels_dict[value] = key
+    
+    # feat_dict = {}
+    # for i in range(len(feat_string)):
+    #     feat_dict[f'feat_list[i]'] =  feat_string[i]
+    
+    print(feat_list)
+
+    print(labels_dict)
+    #For every value that exists, pull it from the master object
+
+     #     "value" : "Happiness Score",
+        #     "country" : "Country",
+        #     "variable" : "Features"
+        # },
+
+    fig = px.bar(
+        filtered_df,
+        x=cols,
+        y="country",
+        title=title_string,
+        #labels = labels_dict,
+        labels = {
+            "value" : "Happiness Score",
+            "country" : "Country",
+            "variable" : "Features"
+        },
+        orientation="h",
+    )
+    
+    ### Code adapted from https://stackoverflow.com/questions/64371174/plotly-how-to-change-variable-label-names-for-the-legend-in-a-plotly-express-li
+    def customLegend(fig, nameSwap):
+        for i, dat in enumerate(fig.data):
+            for elem in dat:
+                if elem == 'name':
+                    fig.data[i].name = nameSwap[fig.data[i].name]
+        return(fig)
+
+    fig = customLegend(fig=fig, nameSwap = {"value" : "Happiness Score",
+            "country" : "Country", "variable" : "Features", 'gdp_per_capita': 'GDP Per Capita', 'family': 'Family', 'health_life_expectancy': 'Life Expectancy', 'freedom': 'Freedom', 'perceptions_of_corruption': 'Corruption', 'generosity': 'Generosity', 'dystopia_residual': 'Dystopia baseline + residual'})
+
+    ## If wanting to move legend around, update layout
+    # fig.update_layout({"legend_orientation": "h", "margin": {"t": 40, "l": 50}})
+
+    return fig
+
 
 if __name__ == "__main__":
     app.run_server(debug=True)
