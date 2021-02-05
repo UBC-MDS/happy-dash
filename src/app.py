@@ -4,9 +4,10 @@
 import dash
 import dash_html_components as html
 import dash_core_components as dcc
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 import pandas as pd
+import plotly.graph_objects as go
 import plotly_express as px
 
 ###********************************* Define constants *******************************************
@@ -39,6 +40,7 @@ feature_dict = {
     "Dystopia baseline + residual": "dystopia_residual",
 }
 
+discrete_color_scheme = px.colors.qualitative.Pastel
 
 ###***************************************Layout building************************************
 
@@ -68,7 +70,19 @@ sidebar = dbc.Col(
             pushable=1,
         ),
         html.Hr(),
-        html.H3("Countries", className="display-6"),
+        html.H3(
+            "Countries",
+            className="display-6",
+            style={"width": "50%", "display": "inline-block"},
+        ),
+        dbc.Button(
+            "?",
+            id="country-help",
+            color="info",
+            outline=True,
+            size="sm",
+            style={"float": "right"},
+        ),
         dbc.Col(
             dcc.Dropdown(
                 id="country-select-1",
@@ -81,23 +95,18 @@ sidebar = dbc.Col(
                 "padding": "10px 10px 10px 0px",
             },
         ),
-        #### -------------- FOR FILTERING ON REGIONS, NOT SURE ON DESIGN YET
-        # html.H3("Regions", className="display-6"),
-        # dbc.Col(
-        #     dcc.Dropdown(
-        #         id="region-select-1",
-        #         multi=True,
-        #         options=[
-        #             {"label": x, "value": x}
-        #             for x in summary_df.sort_values(by="region").region.unique()
-        #         ],
-        #         value=["Canada", "Switzerland", "China"],
-        #     ),
-        #     width=12,
-        #     style={
-        #         "padding": "10px 10px 10px 0px",
-        #     },
-        # ),
+        # Add a help box for showing how to select countries
+        dbc.Popover(
+            [
+                dbc.PopoverHeader("Country Selection"),
+                dbc.PopoverBody(
+                    "Select countries to evaluate here, or you can click on them on the map"
+                ),
+            ],
+            id="popover",
+            is_open=False,
+            target="country-help",
+        ),
     ],
     style={"background-color": "#f8f9fa"},
     md=3,
@@ -123,8 +132,10 @@ summary_content = dbc.Col(
         dcc.Loading(
             type="cube",
             children=[
-                dcc.Graph(id="happiness-map", style={"height": "50vh"}),
-                dcc.Graph(id="happiness-bar-chart", style={"height": "45vh"}),
+                dcc.Graph(id="happiness-map", figure={}, style={"height": "50vh"}),
+                dcc.Graph(
+                    id="happiness-bar-chart", figure={}, style={"height": "45vh"}
+                ),
             ],
         ),
     ],
@@ -148,15 +159,14 @@ app.layout = dbc.Container(
                         dbc.Tabs(
                             [
                                 dbc.Tab(
-                                    detail_content,
-                                    label="Detailed View",
-                                    tab_id="detail_view",
-                                    # style={"background-color": "red"},
-                                ),
-                                dbc.Tab(
                                     summary_content,
                                     label="Summary View",
                                     tab_id="summary_view",
+                                ),
+                                dbc.Tab(
+                                    detail_content,
+                                    label="Detailed View",
+                                    tab_id="detail_view",
                                 ),
                             ],
                             id="tabs",
@@ -256,6 +266,7 @@ def build_detail_plots(country_list, feat_list, year_range, active_tab):
             x="year",
             y="happiness_score",
             color="country",
+            color_discrete_sequence=discrete_color_scheme,
             title="Happiness Score Over Time by Country",
         )
         .update_traces(mode="lines+markers")
@@ -280,6 +291,7 @@ def build_detail_plots(country_list, feat_list, year_range, active_tab):
             ),
             x="year",
             y="Contribution",
+            color_discrete_sequence=discrete_color_scheme,
             color="country",
             facet_col="variable",
             facet_col_wrap=2,
@@ -332,22 +344,17 @@ def happiness_map(year_range, active_tab):
 
     # Filter to specified data
     # Leave all countries in
-    filtered_df = (
-        filter_df(summary_df, [], [], year_range)
-        # .assign(year=lambda x: pd.to_datetime(x.year, format="%Y"))
-        .sort_values(by="year")
-    )
+    filtered_df = filter_df(summary_df, [], [], year_range).sort_values(by="year")
 
     fig = px.choropleth(
         data_frame=filtered_df,
-        locationmode="ISO-3",
+        # locationmode="ISO-3",
         locations="country_code",
         hover_name="country",
         color="happiness_score",
         animation_frame="year",
         animation_group="country",
-        # range_color=[3, 10]
-        # text=summary_df["country"],
+        color_continuous_scale=px.colors.sequential.Sunset_r,
     )
 
     fig.layout.sliders[0].pad.t = 10
@@ -363,6 +370,7 @@ def happiness_map(year_range, active_tab):
 
     return fig
 
+
 @app.callback(
     Output("happiness-bar-chart", "figure"),
     [
@@ -372,7 +380,6 @@ def happiness_map(year_range, active_tab):
         Input("tabs", "active_tab"),
     ],
 )
-
 def build_overall_graph(country_list, feat_list, year_list, active_tab):
     """Builds a bar chart summarizing certain countries, feature names (columns in the df)
     and a time frame
@@ -387,12 +394,12 @@ def build_overall_graph(country_list, feat_list, year_list, active_tab):
         List of years to filter on
     active_tab : string
         Name of active tab in content area. Used to short circuit callback if detail content isn't active
-    
+
     Returns
     -------
     fig : plotly.express.Figure
     """
-     # Short circuit if detail tab isn't active
+    # Short circuit if detail tab isn't active
     if active_tab != "summary_view":
         return {}
 
@@ -414,60 +421,95 @@ def build_overall_graph(country_list, feat_list, year_list, active_tab):
         else f"Happiness Score by Contributing Factor: {year_list[0]}"
     )
 
-    labels_dict = {
-        "value" : "Happiness Score",
-        "country" : "Country",
-        "variable" : "Features"
-    }
-
-    for feat in feat_list:
-        for key, value in feature_dict.items():
-         if feat == value:
-             labels_dict[value] = key
-    
-    # feat_dict = {}
-    # for i in range(len(feat_string)):
-    #     feat_dict[f'feat_list[i]'] =  feat_string[i]
-    
-    print(feat_list)
-
-    print(labels_dict)
-    #For every value that exists, pull it from the master object
-
-     #     "value" : "Happiness Score",
-        #     "country" : "Country",
-        #     "variable" : "Features"
-        # },
-
     fig = px.bar(
         filtered_df,
         x=cols,
         y="country",
         title=title_string,
-        #labels = labels_dict,
-        labels = {
-            "value" : "Happiness Score",
-            "country" : "Country",
-            "variable" : "Features"
+        color_discrete_sequence=discrete_color_scheme,
+        labels={
+            "value": "Happiness Score",
+            "country": "Country",
+            "variable": "Features",
         },
         orientation="h",
     )
-    
+
     ### Code adapted from https://stackoverflow.com/questions/64371174/plotly-how-to-change-variable-label-names-for-the-legend-in-a-plotly-express-li
     def customLegend(fig, nameSwap):
         for i, dat in enumerate(fig.data):
             for elem in dat:
-                if elem == 'name':
+                if elem == "name":
                     fig.data[i].name = nameSwap[fig.data[i].name]
-        return(fig)
+        return fig
 
-    fig = customLegend(fig=fig, nameSwap = {"value" : "Happiness Score",
-            "country" : "Country", "variable" : "Features", 'gdp_per_capita': 'GDP Per Capita', 'family': 'Family', 'health_life_expectancy': 'Life Expectancy', 'freedom': 'Freedom', 'perceptions_of_corruption': 'Corruption', 'generosity': 'Generosity', 'dystopia_residual': 'Dystopia baseline + residual'})
+    fig = customLegend(
+        fig=fig,
+        nameSwap={
+            "value": "Happiness Score",
+            "country": "Country",
+            "variable": "Features",
+            "gdp_per_capita": "GDP Per Capita",
+            "family": "Family",
+            "health_life_expectancy": "Life Expectancy",
+            "freedom": "Freedom",
+            "perceptions_of_corruption": "Corruption",
+            "generosity": "Generosity",
+            "dystopia_residual": "Dystopia baseline + residual",
+        },
+    )
 
     ## If wanting to move legend around, update layout
     # fig.update_layout({"legend_orientation": "h", "margin": {"t": 40, "l": 50}})
 
     return fig
+
+
+# Callback to allow clicks on the map to add countries to filter
+@app.callback(
+    Output("country-select-1", "value"),
+    [
+        Input("happiness-map", "clickData"),
+    ],
+    [State("country-select-1", "value")],
+)
+def country_click(click_data, current_countries):
+    """Gets click data from happiness map - adds to countries in `country-select-1` drop down box.
+    Uses State to get current countries already in box
+
+    Parameters
+    ----------
+    click_data : dict
+        dictionary corresponding to the points click on `happiness-map`
+    """
+    if click_data is not None:
+        country_code_selected = click_data["points"][0]["location"]
+
+        new_country = summary_df.loc[
+            summary_df.country_code == country_code_selected, "country"
+        ].unique()[0]
+
+        if current_countries is None:
+            return new_country
+        elif new_country not in set(current_countries):
+            return current_countries + [new_country]
+        else:
+            return current_countries
+
+    else:
+        return current_countries
+
+
+# Callback for showing help on country selection
+@app.callback(
+    Output("popover", "is_open"),
+    [Input("country-help", "n_clicks")],
+    [State("popover", "is_open")],
+)
+def toggle_popover(n, is_open):
+    if n:
+        return not is_open
+    return is_open
 
 
 if __name__ == "__main__":
