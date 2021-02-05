@@ -485,16 +485,14 @@ def country_click(click_data, current_countries):
     if click_data is not None:
         country_code_selected = click_data["points"][0]["location"]
 
-        new_country = list(
-            summary_df.loc[
-                summary_df.country_code == country_code_selected, "country"
-            ].unique()
-        )
+        new_country = summary_df.loc[
+            summary_df.country_code == country_code_selected, "country"
+        ].unique()[0]
 
         if current_countries is None:
             return new_country
-        elif new_country not in current_countries:
-            return current_countries + new_country
+        elif new_country not in set(current_countries):
+            return current_countries + [new_country]
         else:
             return current_countries
 
