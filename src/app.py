@@ -40,6 +40,7 @@ feature_dict = {
     "Dystopia baseline + residual": "dystopia_residual",
 }
 
+discrete_color_scheme = px.colors.qualitative.Pastel
 
 ###***************************************Layout building************************************
 
@@ -69,7 +70,19 @@ sidebar = dbc.Col(
             pushable=1,
         ),
         html.Hr(),
-        html.H3("Countries", className="display-6"),
+        html.H3(
+            "Countries",
+            className="display-6",
+            style={"width": "50%", "display": "inline-block"},
+        ),
+        dbc.Button(
+            "?",
+            id="country-help",
+            color="info",
+            outline=True,
+            size="sm",
+            style={"float": "right"},
+        ),
         dbc.Col(
             dcc.Dropdown(
                 id="country-select-1",
@@ -82,23 +95,18 @@ sidebar = dbc.Col(
                 "padding": "10px 10px 10px 0px",
             },
         ),
-        #### -------------- FOR FILTERING ON REGIONS, NOT SURE ON DESIGN YET
-        # html.H3("Regions", className="display-6"),
-        # dbc.Col(
-        #     dcc.Dropdown(
-        #         id="region-select-1",
-        #         multi=True,
-        #         options=[
-        #             {"label": x, "value": x}
-        #             for x in summary_df.sort_values(by="region").region.unique()
-        #         ],
-        #         value=["Canada", "Switzerland", "China"],
-        #     ),
-        #     width=12,
-        #     style={
-        #         "padding": "10px 10px 10px 0px",
-        #     },
-        # ),
+        # Add a help box for showing how to select countries
+        dbc.Popover(
+            [
+                dbc.PopoverHeader("Country Selection"),
+                dbc.PopoverBody(
+                    "Select countries to evaluate here, or you can click on them on the map"
+                ),
+            ],
+            id="popover",
+            is_open=False,
+            target="country-help",
+        ),
     ],
     style={"background-color": "#f8f9fa"},
     md=3,
@@ -151,14 +159,14 @@ app.layout = dbc.Container(
                         dbc.Tabs(
                             [
                                 dbc.Tab(
-                                    detail_content,
-                                    label="Detailed View",
-                                    tab_id="detail_view",
-                                ),
-                                dbc.Tab(
                                     summary_content,
                                     label="Summary View",
                                     tab_id="summary_view",
+                                ),
+                                dbc.Tab(
+                                    detail_content,
+                                    label="Detailed View",
+                                    tab_id="detail_view",
                                 ),
                             ],
                             id="tabs",
@@ -258,6 +266,7 @@ def build_detail_plots(country_list, feat_list, year_range, active_tab):
             x="year",
             y="happiness_score",
             color="country",
+            color_discrete_sequence=discrete_color_scheme,
             title="Happiness Score Over Time by Country",
         )
         .update_traces(mode="lines+markers")
@@ -282,6 +291,7 @@ def build_detail_plots(country_list, feat_list, year_range, active_tab):
             ),
             x="year",
             y="Contribution",
+            color_discrete_sequence=discrete_color_scheme,
             color="country",
             facet_col="variable",
             facet_col_wrap=2,
@@ -344,6 +354,7 @@ def happiness_map(year_range, active_tab):
         color="happiness_score",
         animation_frame="year",
         animation_group="country",
+        color_continuous_scale=px.colors.sequential.Sunset_r,
     )
 
     fig.layout.sliders[0].pad.t = 10
@@ -415,7 +426,7 @@ def build_overall_graph(country_list, feat_list, year_list, active_tab):
         x=cols,
         y="country",
         title=title_string,
-        # labels = labels_dict,
+        color_discrete_sequence=discrete_color_scheme,
         labels={
             "value": "Happiness Score",
             "country": "Country",
@@ -489,6 +500,18 @@ def country_click(click_data, current_countries):
 
     else:
         return current_countries
+
+
+# Callback for showing help on country selection
+@app.callback(
+    Output("popover", "is_open"),
+    [Input("country-help", "n_clicks")],
+    [State("popover", "is_open")],
+)
+def toggle_popover(n, is_open):
+    if n:
+        return not is_open
+    return is_open
 
 
 if __name__ == "__main__":
