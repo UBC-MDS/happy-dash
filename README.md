@@ -3,6 +3,11 @@ An interactive exploration of the World Happiness Report
 
 Heroku app [here](https://happydash.herokuapp.com/).
 
+### Research question:
+
+How have overall happiness and factors that contribute to overall happiness changed on a global level and on national levels over time?
+
+
 ### Description of Dashboard Design
 This dashboard is to compare happiness across multiple countries.
 The dashboard will be divided into two main screens: an overview and a detailed view.
