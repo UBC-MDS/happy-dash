@@ -9,6 +9,7 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.graph_objects as go
 import plotly_express as px
+from datetime import datetime
 
 ###********************************* Define constants *******************************************
 summary_df = pd.read_csv("data/processed/summary_df.csv").sort_values(by="country")
@@ -44,9 +45,38 @@ discrete_color_scheme = px.colors.qualitative.Pastel
 
 ###***************************************Layout building************************************
 
+collapse = html.Div(
+    [
+        dbc.Button(
+            "Learn more",
+            id="collapse-button",
+            className="mb-3",
+            outline=False,
+            style={
+                "margin-top": "10px",
+                "width": "150px",
+                "background-color": "white",
+                "color": "steelblue",
+            },
+        ),
+    ]
+)
+
+
 sidebar = dbc.Col(
     children=[
         html.H1("World Happiness Report Explorer", className="display-5"),
+        html.Hr(),
+        dbc.Collapse(
+            html.P(
+                """
+                        This dashboard helps you find the overall happiness of all the 
+                        different countries globally and the details of the contributing factors to their happiness score.""",
+                style={"color": "black", "width": "100%"},
+            ),
+            id="collapse",
+        ),
+        dbc.Col([collapse]),
         html.Hr(),
         html.H2("Features", className="display-6"),
         html.Hr(),
@@ -173,10 +203,33 @@ app.layout = dbc.Container(
                             active_tab="summary_view",
                         ),
                     ],
-                    md=9,
+                    md=7,
                 ),
             ],
-        )
+        ),
+        dbc.Row(
+            children=[
+                dbc.Col(
+                    html.P(
+                        f"""
+        This dashboard was made by Dustin, Aidan and Kevin(Khashayar),
+        Dashboard last updated 2021-02-06.
+        License is still in effect up to 
+        {datetime.now().date()}         
+        """,
+                    ),
+                    width="auto",
+                ),
+                dbc.Col(
+                    html.A(
+                        "    GitHub Repo",
+                        href="https://github.com/UBC-MDS/happy-dash",
+                        target="_blank",
+                    ),
+                    width="auto",
+                ),
+            ]
+        ),
     ],
     fluid=True,
     style={"width": "80%"},
@@ -507,6 +560,17 @@ def country_click(click_data, current_countries):
     [State("popover", "is_open")],
 )
 def toggle_popover(n, is_open):
+    if n:
+        return not is_open
+    return is_open
+
+
+@app.callback(
+    Output("collapse", "is_open"),
+    [Input("collapse-button", "n_clicks")],
+    [State("collapse", "is_open")],
+)
+def toggle_collapse(n, is_open):
     if n:
         return not is_open
     return is_open
